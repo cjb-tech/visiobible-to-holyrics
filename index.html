@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="ru">
+
+<head>
+  <meta charset="UTF-8">
+  <title>VisiBible -> Holyrics</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.0.2/css/bootstrap.min.css">
+</head>
+
+<body translate="no">
+<div class="container">
+  <div class="row">
+    <div class="col-12 pt-3">
+      <h1>
+        VisioBible -> Holrics
+      </h1>
+      <p>
+        В первую очередь нужна версия VisioBible 2.4. Экспортируй песенник в текстовый файл. Затем загрузи этот файл сюда.
+      </p>
+      <p>
+        Полученый архив распакуй и импортируй через пункт <i>Песни</i> -> <i>Импортировать</i> -> <i>Другое</i> -> <i>TXT File (UTF-8)</i>
+      </p>
+      <p>
+        Файл обрабатывается локально в браузере. Никакие данные не отправляются на сервер.
+      </p>
+
+      <input type="file" class="form-control mb-3 js-file">
+
+      <div class="js-process d-none">
+        <p>
+          Найдено <b class="js-processed-count">0</b> песен.
+        </p>
+        <p>
+          <a class="btn btn-primary w-100 js-download">
+            Скачать архив
+          </a>
+        </p>
+      </div>
+    </div>
+  </div>
+</div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.7.1/jszip.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
+<script>
+  const fileInput = document.querySelector(".js-file");
+  const processContainer = document.querySelector(".js-process");
+  const countContainer = document.querySelector(".js-processed-count");
+  const downloadButton = document.querySelector(".js-download");
+
+  const getFileContent = (file) =>
+    new Promise((resolve, _) => {
+      const reader = new FileReader();
+      reader.onloadend = () => resolve(reader.result);
+      reader.readAsText(file);
+    });
+
+  const parseTextToSongs = (text) => {
+    const resultSongs = [];
+    const songs = ("\n\n" + text).replace(/\r/g, "").split(/\n\n\d+\.\s/g);
+    for (const song of songs) {
+      const rows = song.split("\n");
+      const title = rows.shift().trim();
+      const songRows = rows
+        .map((row) => row.trim())
+        .join("\n")
+        .replace(/\n +/g, "\n")
+        .replace(/#([^\n]+)/g, "##($1)")
+        .replace(/\n{2,}/g, "\n\n")
+        .replace(/^\n+/g, "")
+        .replace(/ +/g, " ")
+        .replace(/ +/g, " ")
+        .replace(/^ */g, "")
+        .replace(/\n */g, "\n")
+        .replace(/ *\n/g, "\n")
+        .replace(/^d+. */g, "")
+        .replace(/\nd+. */g, "\n");
+
+      const firstRow = (
+        songRows
+          .split("\n")
+          .filter((row) => !row.includes("#") && row.length > 5)
+          .shift() || ""
+      ).replace(/[.,!?-]$/g, "");
+
+      if (title || songRows) {
+        resultSongs.push({
+          title,
+          firstRow,
+          text: songRows
+        });
+      }
+    }
+
+    return resultSongs;
+  };
+
+  const handleFileSelect = async () => {
+    const file = fileInput.files[0];
+    if (!file) {
+      return;
+    }
+
+    const fileContent = await getFileContent(file);
+    const songsArray = parseTextToSongs(fileContent);
+
+    countContainer.innerText = songsArray.length;
+
+    const zip = new JSZip();
+    for (const song of songsArray) {
+      const fileName = `${song.title}${
+        song.firstRow ? ` (${song.firstRow})` : ""
+      }.txt`;
+      zip.file(fileName, song.text);
+    }
+    const zipBlob = await zip.generateAsync({ type: "blob" });
+    downloadButton.href = URL.createObjectURL(zipBlob);
+    downloadButton.download = `VisioBible2Holyrics_${Date.now()}.zip`;
+
+    processContainer.classList.remove("d-none");
+  };
+  fileInput.addEventListener("change", handleFileSelect);
+</script>
+</body>
+
+</html>
+ 
