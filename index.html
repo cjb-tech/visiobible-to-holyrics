@@ -124,7 +124,7 @@
     }
     const zipBlob = await zip.generateAsync({ type: "blob" });
     downloadButton.href = URL.createObjectURL(zipBlob);
-    downloadButton.download = `${file.name.replace(/.txt$/i, "").replace(/\s/ig, "_")}_VisioBible2Holyrics_${Date.now()}.zip`;
+    downloadButton.download = `${file.name.replace(/\.txt$/i, "").replace(/\s/ig, "_")}_VisioBible2Holyrics_${Date.now()}.zip`;
 
     processContainer.classList.remove("d-none");
   };
